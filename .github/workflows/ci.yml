@@ -27,7 +27,10 @@ jobs:
       - name: Reject private deployment residue
         shell: pwsh
         run: |
-          $patterns = 'C:\\Users\\|SaveGames/0/[A-Fa-f0-9]{32}/|(?:10\.(?:\d{1,3}\.){2}\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.(?:\d{1,3}\.)\d{1,3}|192\.168\.(?:\d{1,3}\.)\d{1,3})'
-          $hits = rg -n --hidden --glob '!.git/**' --pcre2 $patterns .
-          if ($LASTEXITCODE -eq 0) { $hits; throw 'Private deployment residue found.' }
-          if ($LASTEXITCODE -ne 1) { throw 'Privacy scan failed.' }
+          $hits = @()
+          $pathHits = rg -n --hidden --glob '!.git/**' --glob '!.github/workflows/ci.yml' --fixed-strings 'C:\Users\' .
+          if ($LASTEXITCODE -eq 0) { $hits += $pathHits } elseif ($LASTEXITCODE -ne 1) { throw 'Path privacy scan failed.' }
+          $patterns = 'SaveGames/0/[A-Fa-f0-9]{32}/|(?:10\.(?:\d{1,3}\.){2}\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.(?:\d{1,3}\.)\d{1,3}|192\.168\.(?:\d{1,3}\.)\d{1,3})'
+          $patternHits = rg -n --hidden --glob '!.git/**' --glob '!.github/workflows/ci.yml' --pcre2 $patterns .
+          if ($LASTEXITCODE -eq 0) { $hits += $patternHits } elseif ($LASTEXITCODE -ne 1) { throw 'Pattern privacy scan failed.' }
+          if ($hits.Count) { $hits; throw 'Private deployment residue found.' }
