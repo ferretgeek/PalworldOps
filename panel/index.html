@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="ocean">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f3f7ff" id="themeColor">
+  <title>Palworld Ops · 服务端管理</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/panel.css">
+</head>
+<body>
+  <div class="ambient-grid" aria-hidden="true"></div>
+
+  <section class="login-view" id="loginView" aria-labelledby="loginTitle">
+    <div class="login-shell">
+      <div class="login-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48"><path d="M15 10c3 0 5 2 6 5 2-1 4-1 6 0 1-3 3-5 6-5 2 4 3 8 1 12 2 2 3 5 3 8 0 8-6 12-13 12S11 38 11 30c0-3 1-6 3-8-2-4-1-8 1-12Z"/><path class="mark-eye" d="M18 27h3m6 0h3M21 34c2 1 4 1 6 0"/></svg>
+      </div>
+      <div class="eyebrow">PALWORLD OPS · SELF-HOSTED</div>
+      <h1 id="loginTitle">欢迎回来</h1>
+      <p>进入你的幻兽帕鲁服务器控制台。</p>
+      <form id="loginForm" class="login-form">
+        <label>
+          <span>管理账号</span>
+          <input id="loginUsername" name="username" value="admin" autocomplete="username" required>
+        </label>
+        <label>
+          <span>管理密码</span>
+          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required autofocus>
+        </label>
+        <label class="login-remember">
+          <input id="rememberLogin" name="remember" type="checkbox" checked>
+          <span class="remember-copy"><strong>30 天内自动登录</strong><small>关闭浏览器或重启面板后仍然有效</small></span>
+        </label>
+        <button class="button button-primary button-wide" type="submit" id="loginButton">进入控制台</button>
+        <p class="form-error" id="loginError" role="alert"></p>
+      </form>
+      <div class="login-foot"><span class="secure-dot"></span>使用现有服务器管理凭据</div>
+    </div>
+  </section>
+
+  <div class="app-shell is-hidden" id="appShell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M15 10c3 0 5 2 6 5 2-1 4-1 6 0 1-3 3-5 6-5 2 4 3 8 1 12 2 2 3 5 3 8 0 8-6 12-13 12S11 38 11 30c0-3 1-6 3-8-2-4-1-8 1-12Z"/><path class="mark-eye" d="M18 27h3m6 0h3M21 34c2 1 4 1 6 0"/></svg>
+        </div>
+        <div><strong>Palworld Ops</strong><span>幻兽帕鲁服务器</span></div>
+      </div>
+      <nav class="side-nav" aria-label="主导航">
+        <button class="nav-item is-active" data-section="overview"><span class="nav-icon">⌁</span><span>总览</span></button>
+        <button class="nav-item" data-section="checks"><span class="nav-icon">✓</span><span>检查</span></button>
+        <button class="nav-item" data-section="control"><span class="nav-icon">⌘</span><span>控制</span></button>
+        <button class="nav-item" data-section="world"><span class="nav-icon">◇</span><span>世界设置</span><span class="nav-count is-hidden" id="changeNavCount">0</span></button>
+        <button class="nav-item" data-section="backups"><span class="nav-icon">□</span><span>备份</span></button>
+        <button class="nav-item" data-section="logs"><span class="nav-icon">≡</span><span>日志</span></button>
+        <a class="nav-item" href="/breed/"><span class="nav-icon">⚭</span><span>配种助手</span></a>
+      </nav>
+      <div class="sidebar-status">
+        <div class="status-row"><span>自动任务</span><strong id="sideAutomation">—</strong></div>
+        <div class="status-row"><span>面板版本</span><strong id="sideVersion">—</strong></div>
+        <div class="status-row"><span>访问范围</span><strong>局域网</strong></div>
+      </div>
+      <button class="sidebar-logout" id="logoutButton">退出管理</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="page-heading">
+          <h1 id="pageTitle">服务器总览</h1>
+          <p id="pageSubtitle">快速确认游戏是否正常运行</p>
+        </div>
+        <div class="top-actions">
+          <div class="live-pill" id="livePill"><span></span><strong id="liveText">正在连接</strong></div>
+          <a class="icon-button icon-link" href="/breed/" title="打开配种助手" aria-label="打开配种助手">⚭</a>
+          <div class="theme-picker">
+            <button class="icon-button" id="themeMenuButton" title="选择浅色主题" aria-label="选择浅色主题" aria-expanded="false">◉</button>
+            <div class="theme-menu is-hidden" id="themeMenu" role="menu" aria-label="浅色主题">
+              <div class="theme-menu-title">选择浅色主题</div>
+              <button data-theme-value="ocean" role="menuitem"><span class="theme-swatch swatch-ocean"></span><span>海盐蓝</span><span class="theme-check">✓</span></button>
+              <button data-theme-value="mint" role="menuitem"><span class="theme-swatch swatch-mint"></span><span>薄荷绿</span><span class="theme-check">✓</span></button>
+              <button data-theme-value="lilac" role="menuitem"><span class="theme-swatch swatch-lilac"></span><span>雾霭紫</span><span class="theme-check">✓</span></button>
+              <button data-theme-value="rose" role="menuitem"><span class="theme-swatch swatch-rose"></span><span>樱雾粉</span><span class="theme-check">✓</span></button>
+              <button data-theme-value="apricot" role="menuitem"><span class="theme-swatch swatch-apricot"></span><span>晨曦橙</span><span class="theme-check">✓</span></button>
+              <button data-theme-value="jade" role="menuitem"><span class="theme-swatch swatch-jade"></span><span>青瓷色</span><span class="theme-check">✓</span></button>
+            </div>
+          </div>
+          <button class="icon-button" id="darkModeButton" title="切换深色模式" aria-label="切换深色模式">☾</button>
+          <button class="icon-button" id="refreshButton" title="立即刷新" aria-label="立即刷新">↻</button>
+        </div>
+      </header>
+
+      <div class="operation-banner is-hidden" id="operationBanner" role="status">
+        <span class="operation-spinner" id="operationSpinner"></span>
+        <div><strong id="operationTitle">正在执行</strong><p id="operationMessage">请稍候…</p></div>
+        <button class="text-button is-hidden" id="dismissOperation">收起</button>
+      </div>
+
+      <aside class="settings-operation is-hidden" id="settingsOperation" role="status" aria-live="polite">
+        <div class="settings-operation-head">
+          <span class="settings-operation-mark" id="settingsOperationMark" aria-hidden="true">↻</span>
+          <div class="settings-operation-copy">
+            <div class="settings-operation-title-row">
+              <strong id="settingsOperationTitle">正在应用世界设置</strong>
+              <span class="settings-operation-state" id="settingsOperationState">处理中</span>
+            </div>
+            <p id="settingsOperationMessage">操作已提交，请勿重复点击。</p>
+          </div>
+        </div>
+        <div class="settings-progress-track" id="settingsProgressTrack" role="progressbar" aria-label="应用世界设置进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="settingsOperationProgress"></span>
+        </div>
+        <ol class="settings-progress-stages" aria-label="设置应用步骤">
+          <li data-settings-stage="0"><span>1</span><strong>收到改动</strong></li>
+          <li data-settings-stage="1"><span>2</span><strong>保存备份</strong></li>
+          <li data-settings-stage="2"><span>3</span><strong>写入设置</strong></li>
+          <li data-settings-stage="3"><span>4</span><strong>重启服务</strong></li>
+          <li data-settings-stage="4"><span>5</span><strong>健康检查</strong></li>
+        </ol>
+        <div class="settings-operation-foot">
+          <span id="settingsOperationElapsed">正在等待服务器返回进度…</span>
+          <button class="button button-quiet is-hidden" id="dismissSettingsOperation">知道了</button>
+        </div>
+      </aside>
+
+      <section class="page-section is-active" id="section-overview">
+        <article class="home-status card">
+          <div class="home-hero">
+            <div class="server-orb" id="serverOrb"><span></span></div>
+            <div class="home-copy">
+              <div class="hero-status" id="heroStatus">正在读取状态</div>
+              <h2 id="heroName">幻兽帕鲁服务器</h2>
+              <p id="heroDetail">等待服务器返回实时数据…</p>
+            </div>
+            <span class="overall-badge" id="overallBadge">检查中</span>
+          </div>
+          <div class="home-state-grid">
+            <div class="home-state"><span>游戏服务</span><strong id="homeGameState">读取中</strong><small id="homeGameDetail">—</small></div>
+            <div class="home-state"><span>在线玩家</span><strong id="homePlayerState">—</strong><small>当前连接人数</small></div>
+            <div class="home-state"><span>服务器 FPS</span><strong id="homeFpsState">—</strong><small>目标稳定接近 60</small></div>
+            <div class="home-state"><span>主机负载</span><strong id="homeResourceState">—</strong><small id="homeResourceDetail">CPU / 内存</small></div>
+          </div>
+          <div class="home-footer">
+            <span id="homeCheckedAt">等待首次刷新</span>
+            <button class="button button-quiet" data-section="checks">查看完整检查</button>
+          </div>
+        </article>
+
+        <div class="content-heading home-performance-heading">
+          <div><h2>实时性能</h2><p>CPU、内存、硬盘和服务器帧率每 5 秒刷新。</p></div>
+        </div>
+        <div class="metric-grid">
+          <article class="metric-card card">
+            <div class="metric-head"><span>主机 CPU</span><span class="metric-chip" id="cpuTemp">—</span></div>
+            <strong class="metric-value" id="cpuValue">—</strong>
+            <div class="meter"><span id="cpuMeter"></span></div>
+            <p id="cpuDetail">读取中</p>
+          </article>
+          <article class="metric-card card">
+            <div class="metric-head"><span>内存</span><span class="metric-chip" id="gameMemory">游戏 —</span></div>
+            <strong class="metric-value" id="memoryValue">—</strong>
+            <div class="meter"><span id="memoryMeter"></span></div>
+            <p id="memoryDetail">读取中</p>
+          </article>
+          <article class="metric-card card">
+            <div class="metric-head"><span>系统盘</span><span class="metric-chip" id="backupSize">备份 —</span></div>
+            <strong class="metric-value" id="diskValue">—</strong>
+            <div class="meter"><span id="diskMeter"></span></div>
+            <p id="diskDetail">读取中</p>
+          </article>
+          <article class="metric-card card">
+            <div class="metric-head"><span>服务器 FPS</span><span class="metric-chip good">客户端不锁帧</span></div>
+            <strong class="metric-value" id="fpsValue">—</strong>
+            <div class="meter"><span id="fpsMeter"></span></div>
+            <p id="frameDetail">这是服务器模拟帧率，不是本机画面帧率</p>
+          </article>
+        </div>
+
+        <div class="overview-grid">
+          <article class="chart-card card">
+            <div class="card-heading">
+              <div><h3>实时负载曲线</h3><p>最近 5 分钟</p></div>
+              <div class="chart-legend"><span class="legend-cpu">CPU</span><span class="legend-memory">内存</span></div>
+            </div>
+            <div class="chart-wrap"><canvas id="loadChart" aria-label="CPU 与内存实时负载图"></canvas></div>
+            <div class="chart-foot"><span id="networkRate">网络 —</span><span id="hostUptime">主机运行 —</span></div>
+          </article>
+
+          <article class="players-card card">
+            <div class="card-heading"><div><h3>在线玩家</h3><p>实时连接列表</p></div><span class="number-badge" id="playerCount">0 / 2</span></div>
+            <div class="player-list" id="playerList"><div class="empty-state compact"><span>静</span><p>目前无人在线</p></div></div>
+          </article>
+        </div>
+
+        <article class="history-card card">
+          <div class="card-heading history-heading">
+            <div><h3>性能历史</h3><p>服务器后台持续记录，关闭面板也不会中断</p></div>
+            <div class="history-actions">
+              <div class="history-source" role="group" aria-label="性能记录来源">
+                <button class="is-active" type="button" data-history-source="server">游戏服务器</button>
+              </div>
+              <div class="history-ranges" role="group" aria-label="性能历史范围">
+                <button class="is-active" type="button" data-history-range="playing">游玩时</button>
+                <button type="button" data-history-range="24h">24 小时</button>
+                <button type="button" data-history-range="7d">7 天</button>
+                <button type="button" data-history-range="30d">30 天</button>
+                <button type="button" data-history-range="90d">90 天</button>
+              </div>
+              <button class="button button-quiet history-download" id="downloadPerformance" type="button">下载 CSV</button>
+            </div>
+          </div>
+          <div class="history-recorder">
+            <span id="historyRecorderState"><i></i>后台记录准备中</span>
+            <span id="historyRetention">每 30 秒采样 · 自动限制容量</span>
+          </div>
+          <div class="history-summary" id="historySummary">
+            <div><span id="historyLabel1">有效记录</span><strong id="historyPlayTime">—</strong></div>
+            <div><span id="historyLabel2">最高在线</span><strong id="historyMaxPlayers">—</strong></div>
+            <div><span id="historyLabel3">平均 FPS</span><strong id="historyAverageFps">—</strong></div>
+            <div><span id="historyLabel4">最低 FPS</span><strong id="historyMinimumFps">—</strong></div>
+            <div><span id="historyLabel5">游戏 CPU P95</span><strong id="historyP95Cpu">—</strong></div>
+            <div><span id="historyLabel6">内存 P95</span><strong id="historyP95Memory">—</strong></div>
+          </div>
+          <div class="history-loading" id="historyLoading"><span class="small-spinner"></span>正在读取性能记录…</div>
+          <div class="history-empty is-hidden" id="historyEmpty">
+            <span>⌁</span>
+            <div><strong>尚无玩家在线时的样本</strong><p>记录器已经待命；你下次进入世界后，这里会自动积累服务器 FPS、CPU、内存和人数数据。</p></div>
+          </div>
+          <div class="history-content is-hidden" id="historyContent">
+            <div class="history-chart-head">
+              <span id="historyChartCaption">游玩时性能变化</span>
+              <div class="chart-legend history-legend"><span class="legend-fps" id="historyLegend1">FPS</span><span class="legend-cpu" id="historyLegend2">CPU</span><span class="legend-memory" id="historyLegend3">内存</span><span class="legend-ssd" id="historyLegend4">SSD 温度</span></div>
+            </div>
+            <div class="history-chart-wrap"><canvas id="historyChart" aria-label="性能历史曲线"></canvas></div>
+            <section class="event-timeline" id="historyTimeline" aria-labelledby="eventTimelineTitle">
+              <div class="event-timeline-head">
+                <div><h4 id="eventTimelineTitle">掉帧与运维事件对齐</h4><p id="eventTimelineSummary">掉帧、在线人数、保存、备份和更新共享上方曲线的时间坐标。</p></div>
+                <div class="event-legend" aria-label="事件类型">
+                  <span data-event-kind="fps_drop">掉帧</span><span data-event-kind="players">人数</span><span data-event-kind="save">保存</span><span data-event-kind="backup">备份</span><span data-event-kind="update">更新</span><span data-event-kind="restart">重启</span>
+                </div>
+              </div>
+              <div class="event-rail" id="historyEventRail" role="list" aria-label="性能事件时间轴"></div>
+              <div class="event-list" id="historyEventList" aria-live="polite"></div>
+            </section>
+            <div id="serverCapacity">
+              <div class="capacity-head">
+                <div><h4>人数档实测</h4><p id="capacityMessage">正在积累用于承载能力判断的数据。</p></div>
+                <span id="capacityStable">尚未形成样本</span>
+              </div>
+              <div class="capacity-table-wrap">
+                <table class="capacity-table">
+                  <thead><tr><th>在线人数</th><th>有效时长</th><th>平均 / 最低 FPS</th><th>CPU P95</th><th>内存 P95</th><th>判断</th></tr></thead>
+                  <tbody id="capacityRows"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="is-hidden" id="clientSessions">
+              <div class="capacity-head">
+                <div><h4>最近游玩会话</h4><p>按每次游戏进程启动自动分组，可与服务器同一时段对照。</p></div>
+                <span id="clientSessionCount">尚未形成样本</span>
+              </div>
+              <div class="capacity-table-wrap">
+                <table class="capacity-table">
+                  <thead><tr><th>开始时间</th><th>有效时长</th><th>平均 CPU</th><th>平均 GPU</th><th>GPU 峰值温度</th><th>游戏内存峰值</th><th>上传延迟</th></tr></thead>
+                  <tbody id="clientSessionRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="page-section" id="section-checks">
+        <div class="check-focus">
+          <article class="check-summary card">
+            <div class="check-summary-main">
+              <div class="check-orb" id="checkOrb"><span>✓</span></div>
+              <div><span class="summary-label">完整检查结果</span><h2 id="checkOverall">等待检查</h2><p id="checkSummaryText">正在准备只读检查…</p></div>
+            </div>
+            <div class="check-counts">
+              <div><strong id="checkPassCount">—</strong><span>正常</span></div>
+              <div><strong id="checkWarningCount">—</strong><span>提醒</span></div>
+              <div><strong id="checkFailCount">—</strong><span>异常</span></div>
+            </div>
+            <button class="button button-primary" id="refreshChecks">重新检查</button>
+            <div class="check-facts">
+              <div><span>游戏版本</span><strong id="gameVersion">—</strong></div>
+              <div><span>Steam 构建</span><strong id="steamBuild">—</strong></div>
+              <div><span>本次运行</span><strong id="serviceUptime">—</strong></div>
+              <div><span>检查时间</span><strong id="checkCheckedAt">—</strong></div>
+            </div>
+          </article>
+
+          <div class="checks-state" id="checksState"><span class="small-spinner"></span>正在检查服务、端口、存档、自动任务与磁盘…</div>
+          <div class="check-group-tabs" id="checkGroupTabs" role="tablist" aria-label="检查分类"></div>
+          <div class="check-groups" id="checksGroups" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="page-section" id="section-control">
+        <div class="section-intro"><div><p>停服、更新和重启都会先保存世界并创建校验备份；有玩家在线时默认拒绝中断。</p></div></div>
+        <div class="action-grid">
+          <button class="action-card" data-action="save"><span class="action-symbol">⌁</span><strong>保存世界</strong><small>立即请求游戏落盘</small></button>
+          <button class="action-card" data-action="backup"><span class="action-symbol">□</span><strong>手动备份</strong><small>创建、校验并纳入轮换</small></button>
+          <button class="action-card" data-action="update-check"><span class="action-symbol">↺</span><strong>检查更新</strong><small>只查询，不会停服</small></button>
+          <button class="action-card" data-action="update-apply"><span class="action-symbol">⇣</span><strong>安装更新</strong><small>有新版本时安全更新</small></button>
+          <button class="action-card" data-action="start"><span class="action-symbol">▷</span><strong>启动服务</strong><small>启动并等待健康检查</small></button>
+          <button class="action-card danger-soft" data-action="stop"><span class="action-symbol">■</span><strong>停止服务</strong><small>保持停止，不会自动拉起</small></button>
+          <button class="action-card" data-action="restart"><span class="action-symbol">↻</span><strong>安全重启</strong><small>保存、备份、重启、复核</small></button>
+          <button class="action-card" data-action="maintenance"><span class="action-symbol">✦</span><strong>清理维护</strong><small>清理过期日志和备份</small></button>
+        </div>
+
+        <article class="announce-card card">
+          <div><h3>游戏内公告</h3><p>向当前在线玩家发送一条即时消息。</p></div>
+          <form id="announceForm"><input id="announceInput" maxlength="300" placeholder="例如：服务器将在 5 分钟后重启"><button class="button button-primary" type="submit">发送</button></form>
+        </article>
+
+        <article class="update-card card">
+          <div class="card-heading"><div><h3>版本状态</h3><p>Steam 官方服务器构建</p></div><span class="status-tag" id="updateTag">尚未检查</span></div>
+          <div class="update-detail" id="updateDetail">点击“检查更新”查询 Steam 官方构建。</div>
+        </article>
+      </section>
+
+      <section class="page-section" id="section-world">
+        <div class="section-intro world-intro">
+          <div><p>参数名称、选项和说明均优先显示中文；批量修改只会重启一次，失败时恢复原配置和服务状态。</p></div>
+          <div class="settings-search"><span>⌕</span><input id="settingsSearch" type="search" placeholder="搜索中文名称或原始键名"></div>
+        </div>
+        <div class="category-tabs" id="categoryTabs" aria-label="设置分类"></div>
+        <div class="settings-state" id="settingsState"><span class="small-spinner"></span>正在读取世界设置…</div>
+        <div class="settings-list" id="settingsList"></div>
+        <div class="settings-savebar is-hidden" id="settingsSavebar">
+          <div><strong id="changeCount">0 项待应用</strong><span>将先保存和备份，然后仅重启一次</span></div>
+          <button class="button button-quiet" id="discardSettings">放弃改动</button>
+          <button class="button button-primary" id="applySettings">应用并安全重启</button>
+        </div>
+      </section>
+
+      <section class="page-section" id="section-backups">
+        <div class="section-intro">
+          <div><p>每份受管备份在创建时都会完整读取校验；可直接下载到本机另行保存。</p></div>
+          <button class="button button-primary" data-action="backup">创建新备份</button>
+        </div>
+        <div class="backup-summary">
+          <div><span>备份数量</span><strong id="backupCount">—</strong></div>
+          <div><span>占用空间</span><strong id="backupTotal">—</strong></div>
+          <div><span>磁盘保护</span><strong>15 GiB 上限 / 50 GiB 余量</strong></div>
+        </div>
+        <div class="backup-list card" id="backupList"><div class="settings-state"><span class="small-spinner"></span>正在读取备份…</div></div>
+      </section>
+
+      <section class="page-section" id="section-logs">
+        <div class="section-intro">
+          <div><p>页面显示最近日志；诊断包会附带完整检查、服务状态和非敏感设置，并自动隐藏密码。</p></div>
+          <div class="toolbar-actions"><button class="button button-quiet" id="refreshLogs">刷新日志</button><button class="button button-primary" id="downloadDiagnostics">下载诊断包</button></div>
+        </div>
+        <article class="logs-card card">
+          <div class="log-tabs"><button class="is-active" data-log="game">游戏服务</button><button data-log="panel">管理面板</button></div>
+          <pre id="logOutput">进入此页面后读取日志。</pre>
+        </article>
+      </section>
+    </main>
+
+    <nav class="mobile-nav" aria-label="移动端导航">
+      <button class="is-active" data-section="overview"><span>⌁</span>总览</button>
+      <button data-section="checks"><span>✓</span>检查</button>
+      <button data-section="control"><span>⌘</span>控制</button>
+      <button data-section="world"><span>◇</span>设置</button>
+      <button data-section="backups"><span>□</span>备份</button>
+      <button data-section="logs"><span>≡</span>日志</button>
+    </nav>
+  </div>
+
+  <div class="modal-backdrop is-hidden" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="modal-icon" id="modalIcon">!</div>
+      <h2 id="modalTitle">确认操作</h2>
+      <p id="modalMessage"></p>
+      <label class="confirm-input-wrap is-hidden" id="confirmInputWrap"><span id="confirmInputLabel">请输入确认文字</span><input id="confirmInput" autocomplete="off"></label>
+      <div class="modal-actions"><button class="button button-quiet" id="modalCancel">取消</button><button class="button button-danger" id="modalConfirm">确认</button></div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+  <script src="/panel.js" defer></script>
+</body>
+</html>

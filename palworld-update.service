@@ -1,0 +1,15 @@
+[Unit]
+Description=Palworld unattended update check
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+CPUWeight=20
+IOWeight=20
+TimeoutStartSec=30min
+ExecStart=/opt/palworld/bin/palworldctl update --automatic

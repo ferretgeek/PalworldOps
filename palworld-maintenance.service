@@ -1,0 +1,12 @@
+[Unit]
+Description=Palworld bounded disk and SMART maintenance
+After=palworld.service
+
+[Service]
+Type=oneshot
+UMask=0077
+Nice=10
+IOSchedulingClass=idle
+CPUWeight=10
+IOWeight=10
+ExecStart=/opt/palworld/bin/palworldctl maintenance --apply

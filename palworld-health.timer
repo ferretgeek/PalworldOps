@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Palworld health every 5 minutes
+
+[Timer]
+OnBootSec=3m
+OnUnitActiveSec=5m
+AccuracySec=30s
+Unit=palworld-health.service
+
+[Install]
+WantedBy=timers.target

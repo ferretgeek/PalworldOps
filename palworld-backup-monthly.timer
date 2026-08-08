@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule Palworld monthly backup
+
+[Timer]
+OnCalendar=*-*-01 03:55
+Persistent=true
+RandomizedDelaySec=10m
+Unit=palworld-backup-monthly.service
+
+[Install]
+WantedBy=timers.target

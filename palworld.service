@@ -1,0 +1,39 @@
+[Unit]
+Description=Palworld Dedicated Server (LAN)
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=palworld
+Group=palworld
+WorkingDirectory=/opt/palworld/server
+Environment=HOME=/opt/palworld
+UMask=0077
+ExecStartPre=/usr/bin/rm -f /opt/palworld/state/manual-stop.json
+ExecStart=/opt/palworld/server/PalServer.sh -port=8211 -logformat=text
+ExecStopPost=/opt/palworld/bin/backup-after-stop.sh
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=120
+KillSignal=SIGINT
+LimitNOFILE=100000
+LimitCORE=0
+MemoryHigh=11G
+MemoryMax=13G
+MemorySwapMax=2G
+Nice=-5
+CPUWeight=1000
+IOWeight=1000
+IOSchedulingClass=best-effort
+IOSchedulingPriority=0
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/palworld
+
+[Install]
+WantedBy=multi-user.target

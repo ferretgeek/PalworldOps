@@ -1,0 +1,11 @@
+[Unit]
+Description=Schedule Palworld weekly maintenance
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30
+Persistent=true
+RandomizedDelaySec=15m
+Unit=palworld-maintenance.service
+
+[Install]
+WantedBy=timers.target

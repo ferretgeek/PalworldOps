@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.env
+*.env
+!.env.example
+*.sqlite3
+*.sqlite3-*
+*.log
+*.tar
+*.tar.gz
+*.zip
+diagnostics/
+backups/
+state/
+secrets/
+docs/images/*.tmp

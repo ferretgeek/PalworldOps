@@ -1,0 +1,8 @@
+[Unit]
+Description=Palworld game-level health check
+After=palworld.service
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/opt/palworld/bin/palworldctl health --automatic

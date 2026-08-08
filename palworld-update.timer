@@ -1,0 +1,12 @@
+[Unit]
+Description=Check Palworld updates every 30 minutes
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=30m
+Persistent=true
+RandomizedDelaySec=2m
+Unit=palworld-update.service
+
+[Install]
+WantedBy=timers.target
