@@ -27,7 +27,7 @@ jobs:
       - name: Reject private deployment residue
         shell: pwsh
         run: |
-          $files = @(git ls-files | Where-Object { $_ -ne '.github/workflows/ci.yml' -and $_ -notmatch '\.(png|webp|ico)$' })
+          $files = @(git -c core.quotePath=false ls-files | Where-Object { $_ -ne '.github/workflows/ci.yml' -and $_ -notmatch '\.(png|webp|ico)$' })
           $pathHits = @(Select-String -LiteralPath $files -SimpleMatch 'C:\Users\')
           $patterns = 'SaveGames/0/[A-Fa-f0-9]{32}/|(?:10\.(?:\d{1,3}\.){2}\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.(?:\d{1,3}\.)\d{1,3}|192\.168\.(?:\d{1,3}\.)\d{1,3})'
           $patternHits = @(Select-String -LiteralPath $files -Pattern $patterns)
