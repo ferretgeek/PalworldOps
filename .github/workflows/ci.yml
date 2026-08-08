@@ -27,10 +27,9 @@ jobs:
       - name: Reject private deployment residue
         shell: pwsh
         run: |
-          $hits = @()
-          $pathHits = rg -n --hidden --glob '!.git/**' --glob '!.github/workflows/ci.yml' --fixed-strings 'C:\Users\' .
-          if ($LASTEXITCODE -eq 0) { $hits += $pathHits } elseif ($LASTEXITCODE -ne 1) { throw 'Path privacy scan failed.' }
+          $files = @(git ls-files | Where-Object { $_ -ne '.github/workflows/ci.yml' -and $_ -notmatch '\.(png|webp|ico)$' })
+          $pathHits = @(Select-String -LiteralPath $files -SimpleMatch 'C:\Users\')
           $patterns = 'SaveGames/0/[A-Fa-f0-9]{32}/|(?:10\.(?:\d{1,3}\.){2}\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.(?:\d{1,3}\.)\d{1,3}|192\.168\.(?:\d{1,3}\.)\d{1,3})'
-          $patternHits = rg -n --hidden --glob '!.git/**' --glob '!.github/workflows/ci.yml' --pcre2 $patterns .
-          if ($LASTEXITCODE -eq 0) { $hits += $patternHits } elseif ($LASTEXITCODE -ne 1) { throw 'Pattern privacy scan failed.' }
+          $patternHits = @(Select-String -LiteralPath $files -Pattern $patterns)
+          $hits = @($pathHits) + @($patternHits)
           if ($hits.Count) { $hits; throw 'Private deployment residue found.' }
