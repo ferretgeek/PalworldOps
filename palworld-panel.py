@@ -2555,7 +2555,10 @@ class Handler(BaseHTTPRequestHandler):
         )
         if extra:
             for key, value in extra.items():
-                self.send_header(key, value)
+                header_value = str(value)
+                if "\r" in header_value or "\n" in header_value:
+                    raise manager.ManagerError("响应头包含非法换行")
+                self.send_header(key, header_value)
         self.end_headers()
 
     def _json(self, status: int, value: Any, extra: dict[str, str] | None = None) -> None:
@@ -2567,7 +2570,8 @@ class Handler(BaseHTTPRequestHandler):
     @staticmethod
     def _download_headers(filename: str) -> dict[str, str]:
         ascii_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename) or "download.bin"
-        return {"Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(filename)}"}
+        encoded_name = quote(filename.replace("\r", "").replace("\n", ""), safe="")
+        return {"Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{encoded_name}"}
 
     def _download_bytes(self, filename: str, payload: bytes, content_type: str) -> None:
         self._send_headers(HTTPStatus.OK, content_type, len(payload), self._download_headers(filename))
@@ -2786,7 +2790,7 @@ class Handler(BaseHTTPRequestHandler):
                     self._error(HTTPStatus.SERVICE_UNAVAILABLE, "管理密码文件不可读")
                     return
                 valid = hmac.compare_digest(username.encode(), manager.API_USER.encode()) and hmac.compare_digest(
-                    hashlib.sha256(password.encode()).digest(), hashlib.sha256(expected.encode()).digest()
+                    password.encode(), expected.encode()
                 )
                 if not valid:
                     SESSIONS.failed(address)
