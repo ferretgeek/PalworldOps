@@ -2,7 +2,7 @@
   <img src="./docs/images/social-preview.png" alt="Palworld Ops server dashboard preview / Palworld Ops 服务端管理面板预览" width="100%" />
 </p>
 
-# Palworld Ops
+# Palworld Ops — 幻兽帕鲁服务器管理台 / Palworld Server Dashboard
 
 [![CI](https://img.shields.io/github/actions/workflow/status/ferretgeek/PalworldOps/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/ferretgeek/PalworldOps/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-14354C?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
