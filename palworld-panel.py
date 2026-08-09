@@ -2536,10 +2536,14 @@ class Handler(BaseHTTPRequestHandler):
         status: int,
         content_type: str,
         length: int,
-        extra: dict[str, str] | None = None,
         *,
         content_security_policy: str | None = None,
         cache_control: str = "no-store",
+        location: str | None = None,
+        download_filename: str | None = None,
+        session_token: str | None = None,
+        remember_session: bool = False,
+        clear_session: bool = False,
     ) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
@@ -2553,28 +2557,53 @@ class Handler(BaseHTTPRequestHandler):
             content_security_policy
             or "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
         )
-        if extra:
-            for key, value in extra.items():
-                header_value = str(value)
-                if "\r" in header_value or "\n" in header_value:
-                    raise manager.ManagerError("响应头包含非法换行")
-                self.send_header(key, header_value)
+        if location in {"/", "/breed/"}:
+            self.send_header("Location", location)
+        if download_filename is not None:
+            self.send_header("Content-Disposition", self._download_header(download_filename))
+        if clear_session:
+            self.send_header(
+                "Set-Cookie",
+                f"{SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0",
+            )
+        elif session_token is not None:
+            if not re.fullmatch(r"[A-Za-z0-9_-]{32,128}", session_token):
+                raise manager.ManagerError("会话令牌格式无效")
+            cookie = f"{SESSION_COOKIE}={session_token}; Path=/; HttpOnly; SameSite=Strict"
+            if remember_session:
+                cookie += f"; Max-Age={REMEMBER_SESSION_TTL_SECONDS}"
+            self.send_header("Set-Cookie", cookie)
         self.end_headers()
 
-    def _json(self, status: int, value: Any, extra: dict[str, str] | None = None) -> None:
+    def _json(
+        self,
+        status: int,
+        value: Any,
+        *,
+        session_token: str | None = None,
+        remember_session: bool = False,
+        clear_session: bool = False,
+    ) -> None:
         payload = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-        self._send_headers(status, "application/json; charset=utf-8", len(payload), extra)
+        self._send_headers(
+            status,
+            "application/json; charset=utf-8",
+            len(payload),
+            session_token=session_token,
+            remember_session=remember_session,
+            clear_session=clear_session,
+        )
         if self.command != "HEAD":
             self.wfile.write(payload)
 
     @staticmethod
-    def _download_headers(filename: str) -> dict[str, str]:
+    def _download_header(filename: str) -> str:
         ascii_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename) or "download.bin"
         encoded_name = quote(filename.replace("\r", "").replace("\n", ""), safe="")
-        return {"Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{encoded_name}"}
+        return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{encoded_name}"
 
     def _download_bytes(self, filename: str, payload: bytes, content_type: str) -> None:
-        self._send_headers(HTTPStatus.OK, content_type, len(payload), self._download_headers(filename))
+        self._send_headers(HTTPStatus.OK, content_type, len(payload), download_filename=filename)
         if self.command != "HEAD":
             with contextlib.suppress(BrokenPipeError, ConnectionResetError):
                 self.wfile.write(payload)
@@ -2586,7 +2615,7 @@ class Handler(BaseHTTPRequestHandler):
         except OSError as exc:
             raise manager.ManagerError("备份文件不可读") from exc
         with handle:
-            self._send_headers(HTTPStatus.OK, content_type, size, self._download_headers(path.name))
+            self._send_headers(HTTPStatus.OK, content_type, size, download_filename=path.name)
             if self.command == "HEAD":
                 return
             with contextlib.suppress(BrokenPipeError, ConnectionResetError):
@@ -2629,7 +2658,7 @@ class Handler(BaseHTTPRequestHandler):
                 HTTPStatus.FOUND,
                 "text/plain; charset=utf-8",
                 0,
-                {"Location": "/breed/"},
+                location="/breed/",
             )
             return
         if path.startswith("/breed/"):
@@ -2661,7 +2690,7 @@ class Handler(BaseHTTPRequestHandler):
                 HTTPStatus.FOUND,
                 "text/plain; charset=utf-8",
                 0,
-                {"Location": "/"},
+                location="/",
             )
             return
         raw_relative = unquote(path.removeprefix("/breed/"))
@@ -2799,18 +2828,19 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 remember = payload.get("remember") is True
                 token = SESSIONS.create(address, remember=remember)
-                cookie = f"{SESSION_COOKIE}={token}; Path=/; HttpOnly; SameSite=Strict"
-                if remember:
-                    cookie += f"; Max-Age={REMEMBER_SESSION_TTL_SECONDS}"
-                self._json(HTTPStatus.OK, {"ok": True, "remembered": remember}, {"Set-Cookie": cookie})
+                self._json(
+                    HTTPStatus.OK,
+                    {"ok": True, "remembered": remember},
+                    session_token=token,
+                    remember_session=remember,
+                )
                 return
             if not self._require_post_auth():
                 return
             if path == "/api/logout":
                 with contextlib.suppress(manager.ManagerError):
                     SESSIONS.remove(self._cookie_token())
-                cookie = f"{SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0"
-                self._json(HTTPStatus.OK, {"ok": True}, {"Set-Cookie": cookie})
+                self._json(HTTPStatus.OK, {"ok": True}, clear_session=True)
                 return
             if path == "/api/breed/refresh":
                 manager.run(
