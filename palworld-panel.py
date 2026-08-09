@@ -27,7 +27,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
-from urllib.parse import parse_qs, quote, unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 
 PANEL_VERSION = "1.5.0"
@@ -2540,7 +2540,7 @@ class Handler(BaseHTTPRequestHandler):
         content_security_policy: str | None = None,
         cache_control: str = "no-store",
         location: str | None = None,
-        download_filename: str | None = None,
+        attachment_kind: str | None = None,
         session_token: str | None = None,
         remember_session: bool = False,
         clear_session: bool = False,
@@ -2559,8 +2559,12 @@ class Handler(BaseHTTPRequestHandler):
         )
         if location in {"/", "/breed/"}:
             self.send_header("Location", location)
-        if download_filename is not None:
-            self.send_header("Content-Disposition", self._download_header(download_filename))
+        if attachment_kind == "backup":
+            self.send_header("Content-Disposition", 'attachment; filename="palworld-backup.tar.gz"')
+        elif attachment_kind == "diagnostics":
+            self.send_header("Content-Disposition", 'attachment; filename="palworld-diagnostics.zip"')
+        elif attachment_kind == "performance":
+            self.send_header("Content-Disposition", 'attachment; filename="palworld-performance.csv"')
         if clear_session:
             self.send_header(
                 "Set-Cookie",
@@ -2596,14 +2600,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(payload)
 
-    @staticmethod
-    def _download_header(filename: str) -> str:
-        ascii_name = re.sub(r"[^A-Za-z0-9._-]", "_", filename) or "download.bin"
-        encoded_name = quote(filename.replace("\r", "").replace("\n", ""), safe="")
-        return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{encoded_name}"
-
-    def _download_bytes(self, filename: str, payload: bytes, content_type: str) -> None:
-        self._send_headers(HTTPStatus.OK, content_type, len(payload), download_filename=filename)
+    def _download_bytes(self, _filename: str, payload: bytes, content_type: str) -> None:
+        attachment_kind = "diagnostics" if content_type == "application/zip" else "performance"
+        self._send_headers(HTTPStatus.OK, content_type, len(payload), attachment_kind=attachment_kind)
         if self.command != "HEAD":
             with contextlib.suppress(BrokenPipeError, ConnectionResetError):
                 self.wfile.write(payload)
@@ -2615,7 +2614,7 @@ class Handler(BaseHTTPRequestHandler):
         except OSError as exc:
             raise manager.ManagerError("备份文件不可读") from exc
         with handle:
-            self._send_headers(HTTPStatus.OK, content_type, size, download_filename=path.name)
+            self._send_headers(HTTPStatus.OK, content_type, size, attachment_kind="backup")
             if self.command == "HEAD":
                 return
             with contextlib.suppress(BrokenPipeError, ConnectionResetError):
