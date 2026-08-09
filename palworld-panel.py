@@ -22,6 +22,7 @@ import sqlite3
 import threading
 import time
 import zipfile
+import ipaddress
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -31,8 +32,11 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 
 PANEL_VERSION = "1.5.0"
-HOST = os.environ.get("PALWORLD_PANEL_HOST", "0.0.0.0")
+HOST = os.environ.get("PALWORLD_PANEL_HOST", "127.0.0.1")
 PORT = int(os.environ.get("PALWORLD_PANEL_PORT", "8213"))
+SECURE_COOKIE = os.environ.get("PALWORLD_PANEL_SECURE_COOKIE", "false").strip().lower() in {
+    "1", "true", "yes", "on",
+}
 MANAGER_PATH = Path(os.environ.get("PALWORLD_MANAGER", Path(__file__).with_name("palworldctl.py")))
 STATIC_ROOT = Path(os.environ.get("PALWORLD_PANEL_STATIC", "/opt/palworld/panel"))
 if not STATIC_ROOT.is_dir():
@@ -248,6 +252,29 @@ def utc_now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
 
 
+def host_is_loopback(host: str) -> bool:
+    normalized = host.strip().strip("[]").lower()
+    if normalized == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
+
+def validate_runtime_security() -> None:
+    if not host_is_loopback(HOST) and not SECURE_COOKIE:
+        raise RuntimeError(
+            "non-loopback panel binding requires PALWORLD_PANEL_SECURE_COOKIE=true and an HTTPS reverse proxy"
+        )
+    try:
+        password = manager.SECRET.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise RuntimeError("admin password file is missing or unreadable") from exc
+    if len(password) < 16:
+        raise RuntimeError("admin password must contain at least 16 characters")
+
+
 def redact(text: str, limit: int | None = 12000) -> str:
     value = re.sub(r"(?i)(AdminPassword|ServerPassword)(\s*[=:]\s*)([^,\s]+)", r"\1\2<已隐藏>", text)
     value = re.sub(r"(?i)(sentry_key=)[A-Za-z0-9]+", r"\1<已隐藏>", value)
@@ -394,7 +421,12 @@ class HostSampler:
 
     @staticmethod
     def _disk_devices() -> list[str]:
-        result = manager.run(["lsblk", "-dn", "-o", "NAME,TYPE"], check=False, timeout=10)
+        try:
+            result = manager.run(["lsblk", "-dn", "-o", "NAME,TYPE"], check=False, timeout=10)
+        except manager.ManagerError:
+            # Import and test tooling remain usable on non-Linux hosts; the
+            # production service still reports an empty disk-device sample.
+            return []
         devices = []
         for line in (result.stdout or "").splitlines():
             parts = line.split()
@@ -2552,6 +2584,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
+        if SECURE_COOKIE:
+            self.send_header("Strict-Transport-Security", "max-age=31536000")
         self.send_header(
             "Content-Security-Policy",
             content_security_policy
@@ -2574,6 +2608,8 @@ class Handler(BaseHTTPRequestHandler):
             if not re.fullmatch(r"[A-Za-z0-9_-]{32,128}", session_token):
                 raise manager.ManagerError("会话令牌格式无效")
             cookie = f"{SESSION_COOKIE}={session_token}; Path=/; HttpOnly; SameSite=Strict"
+            if SECURE_COOKIE:
+                cookie += "; Secure"
             if remember_session:
                 cookie += f"; Max-Age={REMEMBER_SESSION_TTL_SECONDS}"
             self.send_header("Set-Cookie", cookie)
@@ -2669,6 +2705,11 @@ class Handler(BaseHTTPRequestHandler):
             "/panel.css": ("panel.css", "text/css; charset=utf-8"),
             "/panel.js": ("panel.js", "text/javascript; charset=utf-8"),
             "/favicon.svg": ("favicon.svg", "image/svg+xml"),
+            "/favicon.ico": ("favicon.ico", "image/x-icon"),
+            "/apple-touch-icon.png": ("apple-touch-icon.png", "image/png"),
+            "/icon-192.png": ("icon-192.png", "image/png"),
+            "/icon-512.png": ("icon-512.png", "image/png"),
+            "/site.webmanifest": ("site.webmanifest", "application/manifest+json"),
         }
         if path not in routes:
             self._error(HTTPStatus.NOT_FOUND, "页面不存在")
@@ -2897,6 +2938,7 @@ def main() -> int:
     os.umask(0o077)
     if not STATIC_ROOT.is_dir():
         raise RuntimeError(f"static directory missing: {STATIC_ROOT}")
+    validate_runtime_security()
     PERFORMANCE.start()
     server = PanelServer((HOST, PORT), Handler)
 

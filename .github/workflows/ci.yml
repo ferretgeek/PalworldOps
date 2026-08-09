@@ -20,10 +20,22 @@ jobs:
           node-version: "22"
       - name: Compile Python
         run: python -m py_compile palworldctl.py palworld-panel.py
+      - name: Run functional regression tests
+        run: python -m unittest discover -s tests -v
       - name: Check browser JavaScript
         run: node --check panel/panel.js
       - name: Check shell scripts
         run: bash -n backup-after-stop.sh
+      - name: Check browser brand assets
+        shell: pwsh
+        run: |
+          $required = 'favicon.svg','favicon.ico','apple-touch-icon.png','icon-192.png','icon-512.png','site.webmanifest'
+          foreach ($name in $required) {
+            $path = Join-Path panel $name
+            if (-not (Test-Path -LiteralPath $path) -or (Get-Item -LiteralPath $path).Length -eq 0) {
+              throw "Missing browser asset: $path"
+            }
+          }
       - name: Reject private deployment residue
         shell: pwsh
         run: |

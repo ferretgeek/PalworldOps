@@ -10,8 +10,9 @@ Group=palworld
 WorkingDirectory=/opt/palworld/panel
 EnvironmentFile=-/etc/palworld-ops.env
 Environment=PYTHONUNBUFFERED=1
-Environment=PALWORLD_PANEL_HOST=0.0.0.0
+Environment=PALWORLD_PANEL_HOST=127.0.0.1
 Environment=PALWORLD_PANEL_PORT=8213
+Environment=PALWORLD_PANEL_SECURE_COOKIE=false
 Environment=PALWORLD_MANAGER=/opt/palworld/bin/palworldctl
 Environment=PALWORLD_PANEL_STATIC=/opt/palworld/panel
 ExecStart=/usr/bin/python3 -I /opt/palworld/bin/palworld-panel

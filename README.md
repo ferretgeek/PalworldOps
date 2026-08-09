@@ -51,7 +51,7 @@ sudo install -m 0755 palworldctl.py /opt/palworld/bin/palworldctl
 sudo install -m 0755 palworld-panel.py /opt/palworld/bin/palworld-panel
 sudo cp -a panel/. /opt/palworld/panel/
 sudo install -m 0600 .env.example /etc/palworld-ops.env
-sudo sh -c 'umask 077; printf "%s" "REPLACE_WITH_A_STRONG_PASSWORD" > /opt/palworld/secrets/admin-password'
+sudo sh -c 'umask 077; printf "%s" "REPLACE_WITH_AT_LEAST_16_RANDOM_CHARACTERS" > /opt/palworld/secrets/admin-password'
 ```
 
 逐项核对 `.service` 与 `.timer` 中的路径和资源上限，再安装需要的单元：
@@ -65,9 +65,9 @@ sudo systemctl enable --now palworld.service palworld-panel.service
 sudo systemctl enable --now palworld-health.timer palworld-update.timer
 ```
 
-面板默认监听 `0.0.0.0:8213`。先用防火墙限制到受信任网段，再访问 `http://SERVER_IP:8213`；账号为 `admin`，密码来自 `/opt/palworld/secrets/admin-password`。
+面板默认只监听 `127.0.0.1:8213`。本地打开 `http://127.0.0.1:8213`；远程运维优先使用 `ssh -L 8213:127.0.0.1:8213 SERVER`，或按[运维手册](./docs/OPERATIONS.md)配置 HTTPS 反向代理。账号为 `admin`，密码来自 `/opt/palworld/secrets/admin-password`，且至少 16 个字符。
 
-The panel listens on `0.0.0.0:8213` by default. Restrict it to a trusted subnet before opening `http://SERVER_IP:8213`. The username is `admin`; the password comes from `/opt/palworld/secrets/admin-password`.
+The panel binds to `127.0.0.1:8213` by default. Open `http://127.0.0.1:8213` locally; for remote administration use `ssh -L 8213:127.0.0.1:8213 SERVER` or configure an HTTPS reverse proxy as documented in the [operations guide](./docs/OPERATIONS.md). The username is `admin`; the password file must contain at least 16 characters.
 
 ## 日常命令 / Daily commands
 
@@ -89,6 +89,7 @@ Restore is a dry run by default. `--apply` overwrites the active world and disca
 
 ```bash
 python3 -m py_compile palworldctl.py palworld-panel.py
+python3 -m unittest discover -s tests -v
 node --check panel/panel.js
 bash -n backup-after-stop.sh
 ```
@@ -103,6 +104,12 @@ Windows can validate syntax and the front end; systemd, permissions, SteamCMD, r
 - 不要在玩家在线时停服、更新、恢复或应用需要重启的设置。
 - 生产部署应限制可信网段；需要远程访问时使用 VPN 或经过鉴权的 HTTPS 入口。
 - 安全问题请阅读 [SECURITY.md](./SECURITY.md)。
+
+## 运维与协作 / Operations and contribution
+
+- [安装、架构、升级、备份、恢复、健康检查、卸载与排错 / Operations guide](./docs/OPERATIONS.md)
+- [参与贡献 / Contributing](./CONTRIBUTING.md)
+- [版本记录 / Changelog](./CHANGELOG.md)
 
 ## 技术 / Stack
 
