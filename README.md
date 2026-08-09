@@ -32,6 +32,7 @@ Palworld Ops 是面向现有 Linux Palworld Dedicated Server 的管理层：一�
 - **可验证备份 / Verified backups** — 日、周、月、事件、手动和更新前备份，带成员清单、哈希、容量上限与恢复演练。
 - **世界设置 / World settings** — 分类编辑 `PalWorldSettings.ini`，高风险字段保持保护，应用前先保存和备份。
 - **诊断与历史 / Diagnostics and history** — 性能曲线、运维事件、健康检查、日志、诊断包和 CSV 导出。
+- **全局主题 / Global themes** — 六套浅色配色与 `#17191d` 深灰模式覆盖完整管理流程。
 - **自动化 / Automation** — systemd 健康、更新、维护与备份任务均有 CPU、I/O、内存和磁盘边界。
 
 ## 适用边界 / Scope

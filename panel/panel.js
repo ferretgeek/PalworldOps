@@ -22,7 +22,7 @@ function applyTheme(theme, persist = true) {
   }
   document.documentElement.dataset.theme = selected;
   if (persist) saveValue("palworld-theme", selected);
-  const color = selected === "dark" ? "#0d1421" : getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#f3f7ff";
+  const color = selected === "dark" ? "#17191d" : getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#f3f7ff";
   $("#themeColor")?.setAttribute("content", color);
   const darkButton = $("#darkModeButton");
   if (darkButton) {
