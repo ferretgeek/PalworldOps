@@ -17,6 +17,7 @@ import os
 import re
 import shutil
 import sqlite3
+import stat
 import subprocess
 import sys
 import tarfile
@@ -53,7 +54,9 @@ BACKUPS = BASE / "backups"
 MANAGED = BACKUPS / "managed"
 CONFIG_HISTORY = BACKUPS / "config-history"
 STATE = BASE / "state"
-LOCK_FILE = STATE / "maintenance.lock"
+LOCK_FILE = Path(
+    os.environ.get("PALWORLD_LOCK_FILE", "/run/lock/palworld-ops/maintenance.lock")
+)
 MANUAL_STOP = STATE / "manual-stop.json"
 PERFORMANCE_DB = STATE / "performance-history.sqlite3"
 API_USER = "admin"
@@ -246,10 +249,55 @@ def run(
 
 @contextlib.contextmanager
 def maintenance_lock(nonblocking: bool = False) -> Iterator[None]:
-    ensure_dir(STATE)
-    fd = os.open(LOCK_FILE, os.O_RDWR | os.O_CREAT, 0o660)
+    ids = palworld_ids()
+    if ids is None and os.name == "posix":
+        raise ManagerError("系统缺少 palworld 账号，无法验证维护锁权限")
+    running_as_root = hasattr(os, "geteuid") and os.geteuid() == 0
+    developer_platform = not hasattr(os, "geteuid")
+    parent = LOCK_FILE.parent
+    if running_as_root or developer_platform:
+        parent.mkdir(parents=True, exist_ok=True)
+        parent_status = os.lstat(parent)
+        if not stat.S_ISDIR(parent_status.st_mode):
+            raise ManagerError("维护锁目录不是普通目录")
+        if running_as_root and ids is not None:
+            os.chown(parent, 0, ids[1])
+            os.chmod(parent, 0o750)
+
+    flags = os.O_RDWR | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    if running_as_root or developer_platform:
+        flags |= os.O_CREAT
     try:
-        give_to_palworld(LOCK_FILE)
+        fd = os.open(LOCK_FILE, flags, 0o660)
+    except FileNotFoundError as exc:
+        raise ManagerError(
+            "维护锁尚未由 root 创建；请运行 systemd-tmpfiles --create"
+        ) from exc
+    except OSError as exc:
+        raise ManagerError(f"无法安全打开维护锁：{exc}") from exc
+    try:
+        lock_status = os.fstat(fd)
+        if not stat.S_ISREG(lock_status.st_mode) or lock_status.st_nlink != 1:
+            raise ManagerError("维护锁必须是单链接普通文件")
+        if running_as_root and ids is not None:
+            os.fchown(fd, 0, ids[1])
+            os.fchmod(fd, 0o660)
+            lock_status = os.fstat(fd)
+        if os.name == "posix" and ids is not None:
+            parent_status = os.lstat(parent)
+            if (
+                not stat.S_ISDIR(parent_status.st_mode)
+                or parent_status.st_uid != 0
+                or parent_status.st_gid != ids[1]
+                or stat.S_IMODE(parent_status.st_mode) != 0o750
+            ):
+                raise ManagerError("维护锁目录必须由 root:palworld 以 0750 持有")
+            if (
+                lock_status.st_uid != 0
+                or lock_status.st_gid != ids[1]
+                or stat.S_IMODE(lock_status.st_mode) != 0o660
+            ):
+                raise ManagerError("维护锁必须由 root:palworld 以 0660 持有")
         if fcntl is not None:
             flags = fcntl.LOCK_EX | (fcntl.LOCK_NB if nonblocking else 0)
             try:
@@ -1578,9 +1626,19 @@ def safe_extract(archive_path: Path, destination: Path) -> None:
             source = archive.extractfile(member)
             if source is None:
                 raise ManagerError(f"无法读取：{member.name}")
-            with target.open("wb") as output:
+            flags = (
+                os.O_WRONLY
+                | os.O_CREAT
+                | os.O_EXCL
+                | getattr(os, "O_CLOEXEC", 0)
+                | getattr(os, "O_NOFOLLOW", 0)
+            )
+            try:
+                descriptor = os.open(target, flags, 0o600)
+            except OSError as exc:
+                raise ManagerError(f"拒绝不安全的恢复目标：{member.name}") from exc
+            with os.fdopen(descriptor, "wb") as output:
                 shutil.copyfileobj(source, output, length=1024 * 1024)
-            target.chmod(0o600)
 
 
 def restore_backup(value: str, apply: bool) -> int:
@@ -1619,9 +1677,10 @@ def restore_backup(value: str, apply: bool) -> int:
         create_backup("manual", request_save=was_active)
         if was_active:
             run(["systemctl", "stop", SERVICE], capture=False, timeout=180)
-        token = stamp()
-        staging = STATE / f"restore-staging-{token}"
-        rollback = STATE / f"restore-rollback-{token}"
+        work_root = Path(tempfile.mkdtemp(prefix="palworld-restore-"))
+        work_root.chmod(0o700)
+        staging = work_root / "staging"
+        rollback = work_root / "rollback"
         ensure_dir(rollback, 0o700)
         moved: list[str] = []
         restore_succeeded = False
@@ -1674,7 +1733,7 @@ def restore_backup(value: str, apply: bool) -> int:
         finally:
             shutil.rmtree(staging, ignore_errors=True)
             if restore_succeeded or rollback_succeeded:
-                shutil.rmtree(rollback, ignore_errors=True)
+                shutil.rmtree(work_root, ignore_errors=True)
     if was_active:
         print("恢复完成，服务已重新启动并通过健康检查")
     else:

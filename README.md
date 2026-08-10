@@ -60,6 +60,8 @@ sudo sh -c 'umask 077; printf "%s" "REPLACE_WITH_AT_LEAST_16_RANDOM_CHARACTERS" 
 sudo install -m 0644 palworld.service palworld-panel.service /etc/systemd/system/
 sudo install -m 0644 palworld-health.* palworld-update.* /etc/systemd/system/
 sudo install -m 0644 palworld-backup-* palworld-maintenance.* /etc/systemd/system/
+sudo install -m 0644 palworld-ops-tmpfiles.conf /etc/tmpfiles.d/palworld-ops.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/palworld-ops.conf
 sudo systemctl daemon-reload
 sudo systemctl enable --now palworld.service palworld-panel.service
 sudo systemctl enable --now palworld-health.timer palworld-update.timer
@@ -102,6 +104,7 @@ Windows can validate syntax and the front end; systemd, permissions, SteamCMD, r
 
 - 不要提交 `/opt/palworld/secrets`、存档、数据库、备份、会话、诊断包或日志。
 - 不要在玩家在线时停服、更新、恢复或应用需要重启的设置。
+- 维护锁位于 root 持有的 `/run/lock/palworld-ops`；升级后先运行一次 `systemd-tmpfiles --create`，不要把锁迁回 `palworld` 可写目录。
 - 生产部署应限制可信网段；需要远程访问时使用 VPN 或经过鉴权的 HTTPS 入口。
 - 安全问题请阅读 [SECURITY.md](./SECURITY.md)。
 

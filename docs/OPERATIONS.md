@@ -26,6 +26,8 @@ After installing the files as described in the README, review `/etc/palworld-ops
 
 ```bash
 sudo systemctl daemon-reload
+sudo install -m 0644 palworld-ops-tmpfiles.conf /etc/tmpfiles.d/palworld-ops.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/palworld-ops.conf
 sudo systemctl enable --now palworld.service palworld-panel.service
 sudo /opt/palworld/bin/palworldctl health --json
 curl --fail --silent http://127.0.0.1:8213/api/session
@@ -54,7 +56,7 @@ sudo palworldctl restore latest --apply  # destructive, creates a pre-restore ba
 
 恢复会验证路径、成员类型、每个文件哈希、总指纹和必要内容；失败时尝试恢复原目录并复核服务。恢复前仍应另行复制最新受管备份到另一磁盘。
 
-Restore validates paths, member types, per-file hashes, the combined fingerprint, and required content. A failed apply attempts to restore the previous directories and re-check the service. Keep an additional copy of the latest managed backup on another disk before applying.
+Restore validates paths, member types, per-file hashes, the combined fingerprint, and required content. Extraction and rollback use a root-only random work directory rather than the game-service account's state directory. A failed apply attempts to restore the previous directories and re-check the service. Keep an additional copy of the latest managed backup on another disk before applying.
 
 ## 健康检查与重启恢复 / Health and restart recovery
 

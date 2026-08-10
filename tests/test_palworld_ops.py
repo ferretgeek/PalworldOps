@@ -19,6 +19,7 @@ TEST_ROOT_HANDLE = tempfile.TemporaryDirectory(prefix="palworld-ops-tests-")
 TEST_ROOT = Path(TEST_ROOT_HANDLE.name)
 os.environ.update({
     "PALWORLD_ROOT": str(TEST_ROOT / "runtime"),
+    "PALWORLD_LOCK_FILE": str(TEST_ROOT / "locks" / "maintenance.lock"),
     "PALWORLD_MANAGER": str(REPO_ROOT / "palworldctl.py"),
     "PALWORLD_PANEL_STATIC": str(REPO_ROOT / "panel"),
     "PALWORLD_PANEL_SESSION_STORE": str(TEST_ROOT / "sessions.json"),
@@ -136,6 +137,40 @@ class ManagerTests(unittest.TestCase):
             (destination / "SaveGames/0/SYNTHETIC_WORLD/Level.sav").read_bytes(),
             b"synthetic-save",
         )
+
+    @unittest.skipUnless(hasattr(os, "O_NOFOLLOW"), "Linux no-follow semantics")
+    def test_maintenance_lock_rejects_symlink(self) -> None:
+        lock_file = self.root / "locks" / "maintenance.lock"
+        victim = self.root / "manager.py"
+        victim.write_text("safe", encoding="utf-8")
+        lock_file.parent.mkdir()
+        lock_file.symlink_to(victim)
+        old_lock = manager.LOCK_FILE
+        manager.LOCK_FILE = lock_file
+        try:
+            with self.assertRaises(manager.ManagerError):
+                with manager.maintenance_lock():
+                    pass
+        finally:
+            manager.LOCK_FILE = old_lock
+        self.assertEqual(victim.read_text(encoding="utf-8"), "safe")
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlink support required")
+    def test_safe_extract_rejects_preexisting_symlink_target(self) -> None:
+        archive = self.root / "valid.tar.gz"
+        build_backup(archive)
+        destination = self.root / "extracted"
+        outside = self.root / "outside.bin"
+        outside.write_bytes(b"unchanged")
+        target = destination / "SaveGames/0/SYNTHETIC_WORLD/Level.sav"
+        target.parent.mkdir(parents=True)
+        try:
+            target.symlink_to(outside)
+        except OSError:
+            self.skipTest("symlink creation unavailable")
+        with self.assertRaises(manager.ManagerError):
+            manager.safe_extract(archive, destination)
+        self.assertEqual(outside.read_bytes(), b"unchanged")
 
     def test_backup_rejects_traversal_and_unknown_roots(self) -> None:
         for name in ("../escape", "Other/file.bin", "/absolute/file.bin"):
